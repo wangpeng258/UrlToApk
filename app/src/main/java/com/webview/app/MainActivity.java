@@ -419,9 +419,10 @@ public class MainActivity extends AppCompatActivity {
                 options.inPreferredConfig = Bitmap.Config.ARGB_8888;
                 options.inScaled = false; // Preserve source pixels; do not density-scale assets.
 
-                // Decode close to the display resolution, without going below the
-                // pixels needed by CENTER_CROP. This also reduces peak memory use
-                // when a large splash asset is supplied.
+                // Decode close to the physical display resolution without
+                // unnecessarily losing pixels needed for center-crop rendering.
+                // Small images retain their native resolution and are upscaled
+                // by ImageView when necessary to cover the entire viewport.
                 int sampleSize = 1;
                 while (bounds.outWidth / (sampleSize * 2) >= screenWidth
                         && bounds.outHeight / (sampleSize * 2) >= screenHeight) {
@@ -434,15 +435,11 @@ public class MainActivity extends AppCompatActivity {
                     if (bitmap != null) {
                         // Keep one source pixel equal to one device pixel.
                         bitmap.setDensity(getResources().getDisplayMetrics().densityDpi);
-                        if (bitmap.getWidth() >= screenWidth && bitmap.getHeight() >= screenHeight) {
-                            // Full-bleed, sharp splash when the image has enough pixels.
-                            splashImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                        } else {
-                            // Never enlarge an undersized asset: this avoids the
-                            // strong blur caused by CENTER_CROP upscaling.
-                            // The screen background may be visible around the image.
-                            splashImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-                        }
+                        // Equivalent to CSS object-fit: cover; always fill the
+                        // entire splash viewport while keeping the aspect ratio.
+                        // CENTER_CROP scales small images up and crops any overflow
+                        // equally from the center, without stretching or letterboxing.
+                        splashImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
                         splashImage.setImageBitmap(bitmap);
                         splashImage.setVisibility(View.VISIBLE);
                         defaultSplashContainer.setVisibility(View.GONE);

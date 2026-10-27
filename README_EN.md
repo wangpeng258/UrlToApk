@@ -73,7 +73,7 @@ Click the **Fork** button in the top-right corner to fork this repo to your GitH
 | Splash Image URL | Custom splash image URL (if empty, uses app icon) | ❌ | - |
 
 > **Splash Screen Logic:**
-> - If a splash image URL is provided, the image fills the screen when its pixel resolution is sufficient; undersized images are centered without upscaling to avoid blur (letterboxing may appear)
+> - If a splash image URL is provided, the image always fills the screen like CSS `object-fit: cover`: it scales proportionally and crops overflow from the center with no letterboxing or distortion. Smaller images may be upscaled and look blurry.
 > - If no splash image URL is provided, the app icon is centered on a white background with the app name below
 > - The splash screen displays for at least 2 seconds, then fades out over 500ms after WebView finishes loading
 > - User interaction is disabled while the splash screen is displayed
@@ -100,7 +100,7 @@ The app displays a splash screen on startup to improve user experience:
 
 ### Custom Splash Image Mode
 - Provide a splash image URL in the GitHub Action parameters
-- High-resolution images fill the screen with no rounded corners; smaller images are centered at native resolution without upscaling (letterboxing may appear)
+- Images always fill the screen with no rounded corners or letterboxing, using the equivalent of CSS `object-fit: cover` (proportional scaling with centered cropping). Small images are upscaled and may become blurry.
 - Supports PNG and JPEG formats
 - Splash image is displayed on top of everything (status bar, navigation bar, WebView)
 - For a sharp full-screen result, provide an original image at least as large as the target device's physical screen resolution (e.g. 1080×2400 or higher) with a similar aspect ratio. Upscaling cannot restore missing image detail.
