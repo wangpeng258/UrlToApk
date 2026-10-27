@@ -114,13 +114,10 @@ public class MainActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (filePathCallback != null) {
-                    Uri[] results = null;
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        String dataString = result.getData().getDataString();
-                        if (dataString != null) {
-                            results = new Uri[]{Uri.parse(dataString)};
-                        }
-                    }
+                    // parseResult handles both single and multiple file selections
+                    // (Intent data and ClipData), and returns null if cancelled.
+                    Uri[] results = WebChromeClient.FileChooserParams.parseResult(
+                            result.getResultCode(), result.getData());
                     filePathCallback.onReceiveValue(results);
                     filePathCallback = null;
                 }
@@ -981,6 +978,12 @@ public class MainActivity extends AppCompatActivity {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         // Block back button during splash screen
         if (splashVisible && keyCode == KeyEvent.KEYCODE_BACK) {
+            return true;
+        }
+
+        // Respect NativeBridge.enableBackButton(false) for the physical Back key.
+        // Consume the event without navigating back or exiting the app.
+        if (keyCode == KeyEvent.KEYCODE_BACK && jsBridge != null && !jsBridge.isBackButtonEnabled()) {
             return true;
         }
 

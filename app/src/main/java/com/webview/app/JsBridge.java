@@ -56,7 +56,7 @@ public class JsBridge {
     private final WebView webView;
     private final SharedPreferences prefs;
     private ProgressDialog loadingDialog;
-    private boolean backButtonEnabled = true;
+    private volatile boolean backButtonEnabled = true;
     private boolean isFullscreen = false;
 
     public JsBridge(Activity activity, WebView webView) {
@@ -834,8 +834,9 @@ public class JsBridge {
             try {
                 // Check permission for Android 9 and below
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                    if (activity.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(
+                            activity, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            != PackageManager.PERMISSION_GRANTED) {
                         // Request permission
                         if (activity instanceof MainActivity) {
                             ((MainActivity) activity).requestStoragePermissionForSave(base64);
