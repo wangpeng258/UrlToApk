@@ -44,6 +44,7 @@ UrlToApk is a zero-code Android app generation tool. Simply provide a website UR
 | 📺 Fullscreen | Toggle fullscreen mode |
 | ⚙️ System | System settings shortcut, permission query |
 | 🎮 Events | Key event listener, app exit event listener |
+| 🔗 Deep Links | Open the app from a browser using a package-derived URI scheme, with an optional temporary `url` parameter |
 
 ## 🚀 Getting Started
 
@@ -93,6 +94,45 @@ Click the **Fork** button in the top-right corner to fork this repo to your GitH
 After the workflow completes:
 - Download Artifacts from the Actions run result
 - Download the released APK from the Releases page
+
+## 🔗 Open the App from a Browser (Deep Link)
+
+The URI scheme is generated **at build time** from the Android package name: remove the first and last package segments, concatenate the middle segments without dots, and lowercase them.
+
+| Package name | Deep link |
+|---|---|
+| `com.webview.app` | `webview://open` |
+| `com.example.smart.app` | `examplesmart://open` |
+
+For a two-segment package, the final segment is used. Invalid URI-scheme characters (such as underscores) are removed, and `app` is prefixed if the result would not begin with a letter. Identical middle segments can still produce the same scheme.
+
+For an app packaged as `com.webview.app`:
+
+```html
+<a href="webview://open?url=https%3A%2F%2Fwww.example.com%2F">
+  Open the app at this URL
+</a>
+<a href="webview://open">Open the app</a>
+```
+
+For URLs containing query parameters, encode the *entire* destination address:
+
+```js
+const destination = 'https://www.example.com/home?tab=1&from=web';
+const deepLink = 'webview://open?url=' + encodeURIComponent(destination);
+```
+
+Chrome's Android intent syntax can explicitly target the package:
+
+```html
+<a href="intent://open?url=https%3A%2F%2Fwww.example.com%2F#Intent;scheme=webview;package=com.webview.app;end">Open app</a>
+```
+
+Replace both the `webview` scheme and `com.webview.app` package name according to your build configuration. Browser support depends on browser policy and a user gesture.
+
+The optional `url` must be a valid HTTP(S) address and affects **only the current launch**; it is not saved as the default home page. Relaunching the app normally uses the original website URL configured at build time. Rebuild and reinstall the APK to use the new scheme; the old `urltoapk://` scheme is no longer registered.
+
+---
 
 ## 🖼️ Splash Screen
 

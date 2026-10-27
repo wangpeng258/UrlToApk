@@ -6,13 +6,29 @@ def appUrl = project.hasProperty('APP_URL') ? project.property('APP_URL') : 'htt
 def appName = project.hasProperty('APP_NAME') ? project.property('APP_NAME') : 'WebView App'
 def themeColor = project.hasProperty('THEME_COLOR') ? project.property('THEME_COLOR') : '#2196F3'
 def userAgent = project.hasProperty('USER_AGENT') ? project.property('USER_AGENT') : 'WppWebViewApp/1.0'
+def packageName = project.hasProperty('PACKAGE_NAME') ? project.property('PACKAGE_NAME').toString() : 'com.webview.app'
+
+// Derive a URI scheme from the middle package-name segments:
+// com.webview.app -> webview; com.example.smart.farm -> examplesmart.
+// For a two-part package, use its final segment. Strip characters that
+// URI schemes cannot contain (for example underscores), and ensure the
+// resulting scheme starts with a letter.
+def packageParts = packageName.tokenize('.')
+def schemeSource = packageParts.size() > 2
+        ? packageParts.subList(1, packageParts.size() - 1).join('')
+        : packageParts.last()
+def schemeBase = schemeSource.replaceAll('[^A-Za-z0-9]', '').toLowerCase(java.util.Locale.ROOT)
+def deepLinkScheme = schemeBase == '' || !(schemeBase ==~ /^[a-z][a-z0-9]*$/)
+        ? 'app' + schemeBase
+        : schemeBase
 
 android {
     namespace 'com.webview.app'
     compileSdk 34
 
     defaultConfig {
-        applicationId project.hasProperty('PACKAGE_NAME') ? project.property('PACKAGE_NAME') : 'com.webview.app'
+        applicationId packageName
+        manifestPlaceholders = [deepLinkScheme: deepLinkScheme]
         minSdk 21
         targetSdk 34
         versionCode 1
@@ -22,6 +38,7 @@ android {
         buildConfigField "String", "APP_NAME", "\"${appName}\""
         buildConfigField "String", "THEME_COLOR", "\"${themeColor}\""
         buildConfigField "String", "USER_AGENT", "\"${userAgent}\""
+        buildConfigField "String", "DEEP_LINK_SCHEME", "\"${deepLinkScheme}\""
 
         resValue "string", "app_name", appName
     }

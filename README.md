@@ -97,10 +97,22 @@ UrlToApk 是一个零代码 Android 应用生成工具，只需提供一个网�
 
 ## 🔗 从浏览器或其他 App 打开应用（Deep Link）
 
-安装生成的 APK 后，可在 Android 浏览器或其他 App 中通过链接打开本应用，且可以使用 `url` 参数指定 **App 首页地址**。
+安装生成的 APK 后，可在 Android 浏览器或其他 App 中通过链接打开本应用，且可以使用 `url` 参数指定 **本次打开的首页地址**。
 
-- 唤起协议：`urltoapk://open`
-- 带首页地址：`urltoapk://open?url=<encodeURIComponent 处理后的 HTTP(S) 地址>`
+**唤起协议由打包时的应用包名自动生成**：去掉包名的首段、末段，取中间所有段并去掉点号，转为小写。
+
+| 应用包名 | Deep Link 协议 |
+|---|---|
+| `com.webview.app` | `webview://open` |
+| `com.example.smart.app` | `examplesmart://open` |
+| `com.agriculture.platform.app` | `agricultureplatform://open` |
+
+不足 3 段的包名使用最后一段生成协议；为符合 URI 协议规范，会清除中间部分的非字母数字字符，必要时在开头添加 `app`。不同包名的中间段相同时，生成的协议仍可能相同，可在 Chrome `intent://` 链接中指定完整包名。
+
+**下方示例使用包名 `com.webview.app`，实际使用时要替换为自己的协议。**
+
+- 唤起协议：`webview://open`
+- 带首页地址：`webview://open?url=<encodeURIComponent 处理后的 HTTP(S) 地址>`
 - `url` 仅接受完整的 `http://` / `https://` URL，必须包含域名；非法 URL 不会被加载。
 - **`url` 只对本次打开生效，不保存，也不会修改构建时配置的首页地址**。App 完全退出后，再从桌面图标重新启动时，仍加载打包时填写的“网站URL”。
 - App 未运行时可冷启动；运行中会直接跳转到传入地址。使用 `singleTop` 避免顶部已有的页面被重复创建；不传 `url` 时只唤起 App，不改变当前已打开页面。
@@ -110,12 +122,12 @@ UrlToApk 是一个零代码 Android 应用生成工具，只需提供一个网�
 ### 方式一：HTML a 标签（普通 Android 浏览器）
 
 ```html
-<a href="urltoapk://open?url=https%3A%2F%2Fwww.example.com%2F">
+<a href="webview://open?url=https%3A%2F%2Fwww.example.com%2F">
   打开 App，并设置首页
 </a>
 
 <!-- 不修改首页，仅唤起 App -->
-<a href="urltoapk://open">打开 App</a>
+<a href="webview://open">打开 App</a>
 ```
 
 ### 方式二：动态生成链接（推荐，支持 URL 中的查询参数）
@@ -124,7 +136,7 @@ UrlToApk 是一个零代码 Android 应用生成工具，只需提供一个网�
 <a id="open-my-app" href="#">在 App 中打开</a>
 <script>
   const homeUrl = 'https://www.example.com/dashboard?tab=home&from=h5';
-  const deepLink = 'urltoapk://open?url=' + encodeURIComponent(homeUrl);
+  const deepLink = 'webview://open?url=' + encodeURIComponent(homeUrl);
   document.getElementById('open-my-app').href = deepLink;
 </script>
 ```
@@ -133,15 +145,15 @@ UrlToApk 是一个零代码 Android 应用生成工具，只需提供一个网�
 
 ### 方式三：Chrome intent 链接（指定 APK 包名）
 
-同一台 Android 设备安装多个通过本项目生成的 APK 时，它们都注册了 `urltoapk://` 协议。Chrome 的 `intent://` 链接可以通过 `package` 指定要打开的应用：
+不同包名现在使用各自计算出的协议。如果多个包名生成了相同协议，Chrome 的 `intent://` 链接可以通过 `package` 指定要打开的应用：
 
 ```html
-<a href="intent://open?url=https%3A%2F%2Fwww.example.com%2F#Intent;scheme=urltoapk;package=com.webview.app;end">
+<a href="intent://open?url=https%3A%2F%2Fwww.example.com%2F#Intent;scheme=webview;package=com.webview.app;end">
   在指定 App 中打开
 </a>
 ```
 
-其中 `com.webview.app` 需替换为实际打包时填写的 **应用包名**。Chrome 对 `intent://` 的启动还受用户手势、浏览器策略和设备环境影响；请通过用户主动点击链接触发，不保证所有内置浏览器都支持此格式。
+其中 `com.webview.app` 需替换为实际打包时填写的 **应用包名**，`scheme=webview` 也必须改为该包名对应的协议。Chrome 对 `intent://` 的启动还受用户手势、浏览器策略和设备环境影响；请通过用户主动点击链接触发，不保证所有内置浏览器都支持此格式。
 
 ### Android 调试
 
@@ -149,11 +161,11 @@ UrlToApk 是一个零代码 Android 应用生成工具，只需提供一个网�
 
 ```bash
 adb shell am start -a android.intent.action.VIEW \
-  -d 'urltoapk://open?url=https%3A%2F%2Fwww.example.com%2F' \
+  -d 'webview://open?url=https%3A%2F%2Fwww.example.com%2F' \
   -p com.webview.app
 ```
 
-将包名替换为自己的 `package_name`。通过 `url` 打开指定网页只是临时跳转，不会保存为默认首页；重新启动 App 仍使用打包配置的“网站URL”。
+将包名替换为自己的 `package_name`，并把 `webview://` 替换为生成的协议。通过 `url` 打开指定网页只是临时跳转，不会保存为默认首页；重新启动 App 仍使用打包配置的“网站URL”。修改 Deep Link 协议后，需要**重新打包并安装 APK**；原来的 `urltoapk://` 不再被注册。
 
 > **安全提示：** 改变首页意味着让 App 加载该网站。由于本项目当前 WebView 提供原生 JavaScript Bridge，**只应通过可信的网页和可信的目标 URL 使用此功能**；不要把来源不明的链接作为首页。该功能不会关闭或隔离现有 Bridge 权限。
 

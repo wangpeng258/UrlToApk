@@ -35,12 +35,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Browser / external app deep links: urltoapk://open?url=<encoded URL> -->
+            <!-- Browser / external app deep links: ${deepLinkScheme}://open?url=<encoded URL> -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="urltoapk" android:host="open" />
+                <data android:scheme="${deepLinkScheme}" android:host="open" />
             </intent-filter>
         </activity>
         

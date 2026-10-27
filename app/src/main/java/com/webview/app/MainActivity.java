@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int LOCATION_PERMISSION_REQUEST = 1001;
     private static final int STORAGE_PERMISSION_REQUEST = 1002;
-    private static final String DEEP_LINK_SCHEME = "urltoapk";
+    private static final String DEEP_LINK_SCHEME = BuildConfig.DEEP_LINK_SCHEME;
     private static final String DEEP_LINK_HOST = "open";
     private static final int MAX_HOME_URL_LENGTH = 4096;
     private static final long BACK_PRESS_EXIT_INTERVAL = 1000; // 1 second for double tap exit
