@@ -76,7 +76,7 @@ Click the **Fork** button in the top-right corner to fork this repo to your GitH
 > **Splash Screen Logic:**
 > - If a splash image URL is provided, the image always fills the screen like CSS `object-fit: cover`: it scales proportionally and crops overflow from the center with no letterboxing or distortion. Smaller images may be upscaled and look blurry.
 > - If no splash image URL is provided, the app icon is centered on a white background with the app name below
-> - The splash screen displays for at least 2 seconds, then fades out over 500ms after WebView finishes loading
+> - The splash screen displays for at least 500ms, then fades out over 500ms after WebView finishes loading
 > - User interaction is disabled while the splash screen is displayed
 
 #### Certificate Parameters
@@ -154,8 +154,8 @@ The app displays a splash screen on startup to improve user experience:
 - App name displayed below the icon
 
 ### Display Timing
-- Splash screen displays for at least 2 seconds
-- After WebView finishes loading, if 2 seconds have passed, a 500ms fade-out animation begins
+- Splash screen displays for at least 500ms
+- After WebView finishes loading, if at least 500ms have passed, a 500ms fade-out animation begins
 - If WebView hasn't finished loading, the splash continues until loading completes
 - User interaction is disabled while the splash is displayed
 

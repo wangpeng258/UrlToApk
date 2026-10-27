@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Splash screen constants
     private static final long SPLASH_FADE_OUT_DURATION = 500; // 500ms fade out
-    private static final long SPLASH_MIN_DURATION = 2000; // Minimum 2 seconds display time
+    private static final long SPLASH_MIN_DURATION = 500; // Minimum 500ms display time
     private static final long SPLASH_MAX_DURATION = 30000; // Maximum 30 seconds (fallback)
     private static final long THEME_COLOR_REAPPLY_DELAY = 50; // 50ms delay for theme color reapplication
 
