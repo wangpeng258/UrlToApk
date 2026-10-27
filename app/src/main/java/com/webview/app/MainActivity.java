@@ -61,6 +61,11 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int LOCATION_PERMISSION_REQUEST = 1001;
     private static final int STORAGE_PERMISSION_REQUEST = 1002;
+    private static final String HOME_PREFS_NAME = "UrlToApkHomePrefs";
+    private static final String HOME_PREF_KEY = "home_url";
+    private static final String DEEP_LINK_SCHEME = "urltoapk";
+    private static final String DEEP_LINK_HOST = "open";
+    private static final int MAX_HOME_URL_LENGTH = 4096;
     private static final long BACK_PRESS_EXIT_INTERVAL = 1000; // 1 second for double tap exit
 
     // Location constants
@@ -184,6 +189,8 @@ public class MainActivity extends AppCompatActivity {
             // If restoring state, hide splash immediately
             hideSplashImmediately();
         } else {
+            // Accept a home URL from the initial browser / external app launch.
+            applyDeepLinkHomeUrl(getIntent());
             loadUrl();
 
             // Set minimum display time callback
@@ -195,6 +202,97 @@ public class MainActivity extends AppCompatActivity {
             // Fallback timer - hide splash after max duration
             splashHandler.postDelayed(this::forceHideSplash, SPLASH_MAX_DURATION);
         }
+    }
+
+    /**
+     * Receive links when the existing activity is at the top of its task.
+     * If Android creates a new activity instead, onCreate handles the link.
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String homeUrl = applyDeepLinkHomeUrl(intent);
+        if (homeUrl != null && webView != null) {
+            // Navigate immediately when the app is already open.
+            webView.loadUrl(homeUrl);
+        }
+    }
+
+    private boolean isHomeDeepLink(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) {
+            return false;
+        }
+        Uri data = intent.getData();
+        return data != null
+                && DEEP_LINK_SCHEME.equalsIgnoreCase(data.getScheme())
+                && DEEP_LINK_HOST.equalsIgnoreCase(data.getHost());
+    }
+
+    /**
+     * Persist the requested home URL. Calls from an icon launch or a bare
+     * urltoapk://open link leave the existing home URL untouched.
+     */
+    private String applyDeepLinkHomeUrl(Intent intent) {
+        if (!isHomeDeepLink(intent)) {
+            return null;
+        }
+        String requestedUrl;
+        try {
+            requestedUrl = intent.getData().getQueryParameter("url");
+        } catch (IllegalArgumentException e) {
+            Toast.makeText(this, "首页地址参数无效", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+        if (requestedUrl == null || requestedUrl.isEmpty()) {
+            return null;
+        }
+        String homeUrl = validatedHomeUrl(requestedUrl);
+        if (homeUrl == null) {
+            Toast.makeText(this, "首页地址必须是有效的 HTTP 或 HTTPS URL", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+        getSharedPreferences(HOME_PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putString(HOME_PREF_KEY, homeUrl)
+                .apply();
+        return homeUrl;
+    }
+
+    /**
+     * Reject malformed, unsupported and excessively long URLs before using
+     * an external parameter in WebView.loadUrl().
+     */
+    private String validatedHomeUrl(String url) {
+        if (url == null) {
+            return null;
+        }
+        String candidate = url.trim();
+        if (candidate.isEmpty() || candidate.length() > MAX_HOME_URL_LENGTH
+                || candidate.indexOf('\\n') >= 0 || candidate.indexOf('\\r') >= 0) {
+            return null;
+        }
+        try {
+            Uri parsed = Uri.parse(candidate);
+            String scheme = parsed.getScheme();
+            String host = parsed.getHost();
+            if (!parsed.isHierarchical() || host == null || host.isEmpty()
+                    || scheme == null
+                    || (!"https".equalsIgnoreCase(scheme)
+                        && !"http".equalsIgnoreCase(scheme))) {
+                return null;
+            }
+            return candidate;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private String getHomeUrl() {
+        String saved = getSharedPreferences(HOME_PREFS_NAME, MODE_PRIVATE)
+                .getString(HOME_PREF_KEY, null);
+        String validated = validatedHomeUrl(saved);
+        return validated != null ? validated : BuildConfig.APP_URL;
     }
 
     @Override
@@ -813,8 +911,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadUrl() {
-        String url = BuildConfig.APP_URL;
-        webView.loadUrl(url);
+        webView.loadUrl(getHomeUrl());
     }
 
     /**

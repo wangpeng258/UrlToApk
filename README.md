@@ -44,6 +44,7 @@ UrlToApk 是一个零代码 Android 应用生成工具，只需提供一个网�
 | 📺 全屏 | 全屏模式切换 |
 | ⚙️ 系统 | 系统设置快捷入口、权限查询 |
 | 🎮 事件 | 按键事件监听、应用退出事件监听 |
+| 🔗 外部唤起 | 支持浏览器链接唤起 App，并通过 `url` 参数设置和保存首页地址 |
 
 ## 🚀 使用方法
 
@@ -93,6 +94,69 @@ UrlToApk 是一个零代码 Android 应用生成工具，只需提供一个网�
 工作流完成后，您可以：
 - 在 Actions 运行结果中下载 Artifacts
 - 在 Releases 页面下载发布的 APK
+
+## 🔗 从浏览器或其他 App 打开应用（Deep Link）
+
+安装生成的 APK 后，可在 Android 浏览器或其他 App 中通过链接打开本应用，且可以使用 `url` 参数指定 **App 首页地址**。
+
+- 唤起协议：`urltoapk://open`
+- 带首页地址：`urltoapk://open?url=<encodeURIComponent 处理后的 HTTP(S) 地址>`
+- `url` 仅接受完整的 `http://` / `https://` URL，必须包含域名；非法 URL 不会被加载。
+- **首次通过链接指定首页后会持久化保存**。此后从桌面图标启动、在 App 中使用重新加载，都会继续使用保存的首页；再次携带 `url` 会更新首页。仅唤起、不传 `url` 时保留原首页。未设置过时使用打包时配置的“网站URL”。
+- App 未运行时可冷启动；运行中会直接切换至新首页。使用 `singleTop` 避免顶部已有的页面被重复创建。
+- 本功能适用于 Android；桌面浏览器、iOS 或未安装 APK 的设备不能直接启动这个 Android 应用。
+
+### 方式一：HTML a 标签（普通 Android 浏览器）
+
+```html
+<a href="urltoapk://open?url=https%3A%2F%2Fwww.example.com%2F">
+  打开 App，并设置首页
+</a>
+
+<!-- 不修改首页，仅唤起 App -->
+<a href="urltoapk://open">打开 App</a>
+```
+
+### 方式二：动态生成链接（推荐，支持 URL 中的查询参数）
+
+```html
+<a id="open-my-app" href="#">在 App 中打开</a>
+<script>
+  const homeUrl = 'https://www.example.com/dashboard?tab=home&from=h5';
+  const deepLink = 'urltoapk://open?url=' + encodeURIComponent(homeUrl);
+  document.getElementById('open-my-app').href = deepLink;
+</script>
+```
+
+**注意：** 必须对整个首页 URL 使用 `encodeURIComponent()`，特别是目标 URL 自己带有 `?`、`&`、`#` 等字符时，不要直接拼接原始 URL。Android 端会自动解析 `url`，不需要重复解码。
+
+### 方式三：Chrome intent 链接（指定 APK 包名）
+
+同一台 Android 设备安装多个通过本项目生成的 APK 时，它们都注册了 `urltoapk://` 协议。Chrome 的 `intent://` 链接可以通过 `package` 指定要打开的应用：
+
+```html
+<a href="intent://open?url=https%3A%2F%2Fwww.example.com%2F#Intent;scheme=urltoapk;package=com.webview.app;end">
+  在指定 App 中打开
+</a>
+```
+
+其中 `com.webview.app` 需替换为实际打包时填写的 **应用包名**。Chrome 对 `intent://` 的启动还受用户手势、浏览器策略和设备环境影响；请通过用户主动点击链接触发，不保证所有内置浏览器都支持此格式。
+
+### Android 调试
+
+安装 APK 后可以用 ADB 测试：
+
+```bash
+adb shell am start -a android.intent.action.VIEW \
+  -d 'urltoapk://open?url=https%3A%2F%2Fwww.example.com%2F' \
+  -p com.webview.app
+```
+
+将包名替换为自己的 `package_name`。使用参数更新首页会持久保存，卸载 App 或清除 App 数据将清除这一配置。
+
+> **安全提示：** 改变首页意味着让 App 加载该网站。由于本项目当前 WebView 提供原生 JavaScript Bridge，**只应通过可信的网页和可信的目标 URL 使用此功能**；不要把来源不明的链接作为首页。该功能不会关闭或隔离现有 Bridge 权限。
+
+---
 
 ## 🖼️ 首屏加载动画
 
