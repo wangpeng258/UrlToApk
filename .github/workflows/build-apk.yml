@@ -26,6 +26,7 @@ on:
         description: "应用图标URL (公开可访问的PNG图片地址，可选)"
         required: false
         type: string
+        default: "https://wmimg.com/i/1792/2025/12/692e96b4c100f.png"
       splash_image_url:
         description: "首屏图片URL (公开可访问的图片地址，可选，填写则使用该图片作为首屏，不填则使用应用图标)"
         required: false
@@ -177,6 +178,11 @@ jobs:
             echo "Error: Invalid PNG image format"
             exit 1
           fi
+
+          # Keep the full-resolution source for the splash screen. The launcher
+          # mipmap assets below are intentionally much smaller (48-192 px).
+          mkdir -p app/src/main/assets
+          cp /tmp/app_icon.png app/src/main/assets/splash_icon.png
 
           # Install ImageMagick for image resizing
           sudo apt-get update && sudo apt-get install -y imagemagick

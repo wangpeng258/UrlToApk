@@ -103,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
     // Splash screen fields
     private ConstraintLayout splashContainer;
     private ImageView splashImage;
+    private ImageView splashAppIcon;
     private LinearLayout defaultSplashContainer;
     private Handler splashHandler;
     private long splashStartTime;
@@ -287,6 +288,7 @@ public class MainActivity extends AppCompatActivity {
     private void initSplashScreen() {
         splashContainer = findViewById(R.id.splashContainer);
         splashImage = findViewById(R.id.splashImage);
+        splashAppIcon = findViewById(R.id.appIcon);
         defaultSplashContainer = findViewById(R.id.defaultSplashContainer);
         TextView splashAppName = findViewById(R.id.splashAppName);
 
@@ -364,6 +366,59 @@ public class MainActivity extends AppCompatActivity {
 
         splashImage.setVisibility(View.GONE);
         defaultSplashContainer.setVisibility(View.VISIBLE);
+        loadSplashAppIcon();
+    }
+
+    /**
+     * Load the original launcher image for the centered splash icon.
+     * The mipmap launcher resources are only 48-192px and look blurry when
+     * expanded into the 120dp splash icon view on high-density devices.
+     */
+    private void loadSplashAppIcon() {
+        if (splashAppIcon == null) return;
+
+        try {
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            try (InputStream stream = getAssets().open("splash_icon.png")) {
+                BitmapFactory.decodeStream(stream, null, bounds);
+            }
+
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return;
+
+            int targetSizePx = Math.max(1,
+                    Math.round(120f * getResources().getDisplayMetrics().density));
+
+            // Decode near the displayed size to keep memory use reasonable,
+            // while never reducing the bitmap below the desired physical size.
+            int sampleSize = 1;
+            while (bounds.outWidth / (sampleSize * 2) >= targetSizePx
+                    && bounds.outHeight / (sampleSize * 2) >= targetSizePx) {
+                sampleSize *= 2;
+            }
+
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+            options.inScaled = false;
+            options.inSampleSize = sampleSize;
+
+            try (InputStream stream = getAssets().open("splash_icon.png")) {
+                Bitmap bitmap = BitmapFactory.decodeStream(stream, null, options);
+                if (bitmap == null) return;
+
+                // BitmapDrawable otherwise treats the decoded bitmap as 160dpi
+                // and may apply an additional, unwanted density scale.
+                bitmap.setDensity(getResources().getDisplayMetrics().densityDpi);
+                splashAppIcon.setScaleType(
+                        bitmap.getWidth() >= targetSizePx && bitmap.getHeight() >= targetSizePx
+                                ? ImageView.ScaleType.CENTER_CROP
+                                : ImageView.ScaleType.CENTER_INSIDE);
+                splashAppIcon.setImageBitmap(bitmap);
+            }
+        } catch (Exception ignored) {
+            // The original icon asset may be absent for builds without an icon URL.
+            // In that case keep the existing mipmap fallback from the layout.
+        }
     }
 
     /**
@@ -405,9 +460,12 @@ public class MainActivity extends AppCompatActivity {
         if (splashContainer != null) {
             splashContainer.setVisibility(View.GONE);
         }
-        // Release the splash bitmap after it is no longer displayed.
+        // Release both splash images after they are no longer displayed.
         if (splashImage != null) {
             splashImage.setImageDrawable(null);
+        }
+        if (splashAppIcon != null) {
+            splashAppIcon.setImageDrawable(null);
         }
         restoreNormalWindow();
     }
@@ -441,9 +499,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onAnimationEnd(Animation animation) {
                 splashContainer.setVisibility(View.GONE);
-                // Free the decoded image after the fade-out finishes.
+                // Release both images after the fade-out finishes.
                 if (splashImage != null) {
                     splashImage.setImageDrawable(null);
+                }
+                if (splashAppIcon != null) {
+                    splashAppIcon.setImageDrawable(null);
                 }
                 // Force apply status bar color after splash animation completes
                 forceSetStatusBarColor();

@@ -65,7 +65,7 @@ Click the **Fork** button in the top-right corner to fork this repo to your GitH
 | App Name | Name displayed on the device | ✅ | My App |
 | Package Name | Unique Android app identifier | ✅ | com.webview.app |
 | Theme Color | Status bar and theme color | ❌ | #2196F3 |
-| App Icon URL | Publicly accessible PNG image URL | ❌ | - |
+| App Icon URL | Publicly accessible PNG image URL | ❌ | https://wmimg.com/i/1792/2025/12/692e96b4c100f.png |
 
 #### Splash Screen Parameters
 | Parameter | Description | Required | Default |
@@ -107,6 +107,8 @@ The app displays a splash screen on startup to improve user experience:
 
 ### Default Icon Mode
 - If no splash image URL is provided, the app icon is used
+- The original full-resolution app icon is preserved for the splash screen, instead of enlarging the small launcher mipmap assets (up to 192×192 pixels)
+- Undersized images are not forcibly upscaled (letterboxing may appear); without an icon URL, the packaged launcher icon remains the fallback
 - White background with centered icon
 - Icon corner radius is 10% of icon width
 - App name displayed below the icon
