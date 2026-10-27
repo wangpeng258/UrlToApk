@@ -269,7 +269,7 @@ public class MainActivity extends AppCompatActivity {
         }
         String candidate = url.trim();
         if (candidate.isEmpty() || candidate.length() > MAX_HOME_URL_LENGTH
-                || candidate.indexOf('\\n') >= 0 || candidate.indexOf('\\r') >= 0) {
+                || candidate.indexOf((char) 10) >= 0 || candidate.indexOf((char) 13) >= 0) {
             return null;
         }
         try {
