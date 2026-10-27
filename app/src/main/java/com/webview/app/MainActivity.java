@@ -61,8 +61,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int LOCATION_PERMISSION_REQUEST = 1001;
     private static final int STORAGE_PERMISSION_REQUEST = 1002;
-    private static final String HOME_PREFS_NAME = "UrlToApkHomePrefs";
-    private static final String HOME_PREF_KEY = "home_url";
     private static final String DEEP_LINK_SCHEME = "urltoapk";
     private static final String DEEP_LINK_HOST = "open";
     private static final int MAX_HOME_URL_LENGTH = 4096;
@@ -183,15 +181,21 @@ public class MainActivity extends AppCompatActivity {
         initSplashScreen();
         initWebView();
 
+        // Remove the legacy persistent override from earlier app versions.
+        // Deep link URLs must only affect the current launch.
+        getSharedPreferences("UrlToApkHomePrefs", MODE_PRIVATE)
+                .edit().remove("home_url").apply();
+
         // Restore state if savedInstanceState is not null
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
             // If restoring state, hide splash immediately
             hideSplashImmediately();
         } else {
-            // Accept a home URL from the initial browser / external app launch.
-            applyDeepLinkHomeUrl(getIntent());
-            loadUrl();
+            // Use a deep link URL for this launch only. A normal launch always
+            // starts at the original URL configured when building the APK.
+            String launchUrl = getDeepLinkUrl(getIntent());
+            webView.loadUrl(launchUrl != null ? launchUrl : BuildConfig.APP_URL);
 
             // Set minimum display time callback
             splashHandler.postDelayed(() -> {
@@ -211,11 +215,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        setIntent(intent);
-        String homeUrl = applyDeepLinkHomeUrl(intent);
-        if (homeUrl != null && webView != null) {
-            // Navigate immediately when the app is already open.
-            webView.loadUrl(homeUrl);
+        String launchUrl = getDeepLinkUrl(intent);
+        if (launchUrl != null && webView != null) {
+            // Only navigate the current session; never update the default URL.
+            webView.loadUrl(launchUrl);
         }
     }
 
@@ -230,10 +233,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Persist the requested home URL. Calls from an icon launch or a bare
-     * urltoapk://open link leave the existing home URL untouched.
+     * Read a temporary URL from an external launch intent without saving it.
+     * A link without a URL leaves the current page unchanged.
      */
-    private String applyDeepLinkHomeUrl(Intent intent) {
+    private String getDeepLinkUrl(Intent intent) {
         if (!isHomeDeepLink(intent)) {
             return null;
         }
@@ -252,10 +255,6 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "首页地址必须是有效的 HTTP 或 HTTPS URL", Toast.LENGTH_SHORT).show();
             return null;
         }
-        getSharedPreferences(HOME_PREFS_NAME, MODE_PRIVATE)
-                .edit()
-                .putString(HOME_PREF_KEY, homeUrl)
-                .apply();
         return homeUrl;
     }
 
@@ -286,13 +285,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (IllegalArgumentException e) {
             return null;
         }
-    }
-
-    private String getHomeUrl() {
-        String saved = getSharedPreferences(HOME_PREFS_NAME, MODE_PRIVATE)
-                .getString(HOME_PREF_KEY, null);
-        String validated = validatedHomeUrl(saved);
-        return validated != null ? validated : BuildConfig.APP_URL;
     }
 
     @Override
@@ -908,10 +900,6 @@ public class MainActivity extends AppCompatActivity {
                 "document.dispatchEvent(new Event('NativeBridgeReady'));" +
                 "})()";
         webView.evaluateJavascript(jsCode, null);
-    }
-
-    private void loadUrl() {
-        webView.loadUrl(getHomeUrl());
     }
 
     /**
