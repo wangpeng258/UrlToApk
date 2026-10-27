@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Point;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -307,23 +308,62 @@ public class MainActivity extends AppCompatActivity {
      */
     private void loadSplashImage() {
         try {
-            // Try to load splash image from assets
-            InputStream inputStream = getAssets().open("splash_image.png");
-            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-            inputStream.close();
-
-            if (bitmap != null) {
-                // Custom splash image - fill entire screen, no rounded corners
-                splashImage.setImageBitmap(bitmap);
-                splashImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                splashImage.setVisibility(View.VISIBLE);
-                defaultSplashContainer.setVisibility(View.GONE);
+            // Read the original pixel dimensions without decoding the bitmap.
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            try (InputStream stream = getAssets().open("splash_image.png")) {
+                BitmapFactory.decodeStream(stream, null, bounds);
             }
-        } catch (Exception e) {
-            // No custom splash image, use default (app icon with white background)
-            splashImage.setVisibility(View.GONE);
-            defaultSplashContainer.setVisibility(View.VISIBLE);
+
+            if (bounds.outWidth > 0 && bounds.outHeight > 0) {
+                // Use physical screen pixels: dp sizes would unnecessarily upscale images
+                // on high-density phones and make the splash look blurry.
+                Point screenSize = new Point();
+                getWindowManager().getDefaultDisplay().getRealSize(screenSize);
+                int screenWidth = Math.max(1, screenSize.x);
+                int screenHeight = Math.max(1, screenSize.y);
+
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                options.inScaled = false; // Preserve source pixels; do not density-scale assets.
+
+                // Decode close to the display resolution, without going below the
+                // pixels needed by CENTER_CROP. This also reduces peak memory use
+                // when a large splash asset is supplied.
+                int sampleSize = 1;
+                while (bounds.outWidth / (sampleSize * 2) >= screenWidth
+                        && bounds.outHeight / (sampleSize * 2) >= screenHeight) {
+                    sampleSize *= 2;
+                }
+                options.inSampleSize = sampleSize;
+
+                try (InputStream stream = getAssets().open("splash_image.png")) {
+                    Bitmap bitmap = BitmapFactory.decodeStream(stream, null, options);
+                    if (bitmap != null) {
+                        // Keep one source pixel equal to one device pixel.
+                        bitmap.setDensity(getResources().getDisplayMetrics().densityDpi);
+                        if (bitmap.getWidth() >= screenWidth && bitmap.getHeight() >= screenHeight) {
+                            // Full-bleed, sharp splash when the image has enough pixels.
+                            splashImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                        } else {
+                            // Never enlarge an undersized asset: this avoids the
+                            // strong blur caused by CENTER_CROP upscaling.
+                            // The screen background may be visible around the image.
+                            splashImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                        }
+                        splashImage.setImageBitmap(bitmap);
+                        splashImage.setVisibility(View.VISIBLE);
+                        defaultSplashContainer.setVisibility(View.GONE);
+                        return;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // No custom splash asset, or an unreadable image: show the app icon.
         }
+
+        splashImage.setVisibility(View.GONE);
+        defaultSplashContainer.setVisibility(View.VISIBLE);
     }
 
     /**
@@ -365,6 +405,10 @@ public class MainActivity extends AppCompatActivity {
         if (splashContainer != null) {
             splashContainer.setVisibility(View.GONE);
         }
+        // Release the splash bitmap after it is no longer displayed.
+        if (splashImage != null) {
+            splashImage.setImageDrawable(null);
+        }
         restoreNormalWindow();
     }
 
@@ -397,6 +441,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onAnimationEnd(Animation animation) {
                 splashContainer.setVisibility(View.GONE);
+                // Free the decoded image after the fade-out finishes.
+                if (splashImage != null) {
+                    splashImage.setImageDrawable(null);
+                }
                 // Force apply status bar color after splash animation completes
                 forceSetStatusBarColor();
             }
