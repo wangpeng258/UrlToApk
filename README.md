@@ -533,18 +533,39 @@ NativeBridge.playSound('success'); // 播放成功提示音
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `status` | `String` | `"success"` \| `"permission_denied"` \| `"error"` |
-| `latitude` | `Number` | 纬度（成功时） |
-| `longitude` | `Number` | 经度（成功时） |
-| `accuracy` | `Number` | 精度（米） |
+| `latitude` | `Number` | 纬度（成功时），十进制度 |
+| `longitude` | `Number` | 经度（成功时），十进制度 |
+| `coordinateSystem` | `String` | 坐标系，固定为 `WGS84` |
+| `coordinateSystemCode` | `String` | 坐标系 EPSG 标识，固定为 `EPSG:4326` |
+| `accuracy` | `Number` | 定位精度（米） |
 | `altitude` | `Number` | 海拔（米） |
 | `speed` | `Number` | 速度（m/s） |
 | `timestamp` | `Number` | 时间戳 |
 | `message` | `String` | 错误信息（失败时） |
 
+定位成功时返回 **WGS-84 坐标系（EPSG:4326）**，不会自动转换为 GCJ-02 或 BD-09。使用高德、腾讯或百度地图时，需要在前端按地图 SDK 要求转换坐标。定位失败时不返回经纬度和坐标系字段。
+
+成功结果示例：
+
+```json
+{
+  "status": "success",
+  "latitude": 30.2741,
+  "longitude": 120.1551,
+  "coordinateSystem": "WGS84",
+  "coordinateSystemCode": "EPSG:4326",
+  "accuracy": 12.5,
+  "altitude": 18.0,
+  "speed": 0.0,
+  "timestamp": 1793942400000
+}
+```
+
 ```javascript
 NativeBridge.getCurrentLocation(function(result) {
   if (result.status === 'success') {
     console.log('坐标:', result.latitude, result.longitude);
+    console.log('坐标系:', result.coordinateSystem, result.coordinateSystemCode);
   } else if (result.status === 'permission_denied') {
     NativeBridge.showToast('请授予位置权限');
   } else {
@@ -1079,6 +1100,7 @@ NativeBridge.getContacts();
           document.getElementById('output').innerHTML = 
             '纬度: ' + result.latitude + '<br>' +
             '经度: ' + result.longitude + '<br>' +
+            '坐标系: ' + result.coordinateSystem + ' (' + result.coordinateSystemCode + ')<br>' +
             '精度: ' + result.accuracy + '米';
         } else {
           NativeBridge.showToast('获取位置失败: ' + result.message);

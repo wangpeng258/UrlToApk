@@ -1056,6 +1056,8 @@ public class MainActivity extends AppCompatActivity {
                 response.put("status", status);
                 response.put("latitude", location.getLatitude());
                 response.put("longitude", location.getLongitude());
+                response.put("coordinateSystem", "WGS84");
+                response.put("coordinateSystemCode", "EPSG:4326");
                 response.put("accuracy", location.getAccuracy());
                 response.put("altitude", location.getAltitude());
                 response.put("speed", location.getSpeed());
