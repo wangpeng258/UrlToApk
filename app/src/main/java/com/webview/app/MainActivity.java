@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
     // Splash screen constants
     private static final long SPLASH_FADE_OUT_DURATION = 500; // 500ms fade out
     private static final long SPLASH_MIN_DURATION = 500; // Minimum 500ms display time
-    private static final long SPLASH_MAX_DURATION = 30000; // Maximum 30 seconds (fallback)
+    private static final long SPLASH_MAX_DURATION = 20000; // Force hide after 20 seconds
     private static final long THEME_COLOR_REAPPLY_DELAY = 50; // 50ms delay for theme color reapplication
 
     private WebView webView;
@@ -203,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
                 checkAndHideSplash();
             }, SPLASH_MIN_DURATION);
 
-            // Fallback timer - hide splash after max duration
+            // Hard timeout: hide the splash even if WebView never finishes loading
             splashHandler.postDelayed(this::forceHideSplash, SPLASH_MAX_DURATION);
         }
     }
